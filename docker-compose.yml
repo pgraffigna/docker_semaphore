@@ -1,0 +1,57 @@
+---
+version: '3.7'
+
+volumes:
+  semaphore-mysql:
+    name: semaphore-mysql
+    driver: local
+
+networks:
+  semaphore-net:
+    name: semaphore-net
+    driver: bridge
+
+services:
+  mysql:
+    container_name: semaphore_db
+    image: mysql:8.0
+    networks:
+      - semaphore-net
+    volumes:
+      - semaphore-mysql:/var/lib/mysql
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}  # change!
+    restart: unless-stopped
+
+  semaphore:
+    container_name: semaphore_app
+    image: semaphoreui/semaphore:v2.8.90
+    networks:
+      - semaphore-net
+    user: "${UID}:${GID}"
+    ports:
+      - 3000:3000
+    environment:
+      - SEMAPHORE_DB_USER=${MYSQL_USER}
+      - SEMAPHORE_DB_PASS=${MYSQL_PASSWORD}  # change!
+      - SEMAPHORE_DB_HOST=mysql
+      - SEMAPHORE_DB_PORT=3306
+      - SEMAPHORE_DB_DIALECT=mysql
+      - SEMAPHORE_DB=${MYSQL_DATABASE}
+      - SEMAPHORE_PLAYBOOK_PATH=/tmp/semaphore/
+      - SEMAPHORE_ADMIN_PASSWORD=${SEMAPHORE_ADMIN_PASSWORD}  # change!
+      - SEMAPHORE_ADMIN_NAME=${SEMAPHORE_ADMIN_NAME}
+      - SEMAPHORE_ADMIN_EMAIL=${SEMAPHORE_ADMIN_EMAIL}
+      - SEMAPHORE_ADMIN=${SEMAPHORE_ADMIN_NAME}
+      - SEMAPHORE_ACCESS_KEY_ENCRYPTION=${SEMAPHORE_ACCESS_KEY_ENCRYPTION} #head -c32 /dev/urandom | base64
+      - ANSIBLE_HOST_KEY_CHECKING=false  # (optional) change to true if you want to enable host key checking
+    volumes:
+      - ./inventory/:/inventory:ro
+      - ./authorized-keys/:/authorized-keys:ro
+      - ./config/:/etc/semaphore:rw
+    restart: unless-stopped
+    depends_on:
+      - mysql

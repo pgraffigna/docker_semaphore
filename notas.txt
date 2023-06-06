@@ -1,0 +1,5 @@
+# cambiar password admin
+docker exec semaphore_app semaphore user change-by-login --login pgraffigna --password testing123! --config /etc/semaphore/config.json
+
+# generador de access key
+head -c32 /dev/urandom | base64
